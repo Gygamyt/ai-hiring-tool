@@ -179,17 +179,24 @@ class AnalysisService:
             try:
                 self._set_google_api_key()
 
-                logger.info("Downloading and transcribing audio...")
+                logger.info("Starting audio processing pipeline...")
+                logger.info(f"Extracting file ID from Google Drive link: {video_link}")
                 video_file_id = fp.get_google_drive_file_id(video_link)
-                temp_audio_path = await fp.download_audio_from_drive_to_temp_file(self.drive_service, video_file_id)
-                transcription_text = await fp.transcribe_audio_assemblyai(temp_audio_path)
-                if not transcription_text:
-                    raise ValueError("Transcription returned no text. The video might be silent or too short.")
+                logger.info(f"Successfully extracted file ID: {video_file_id}")
 
-                if cv_file and cv_filename:
-                    cv_text = fp.read_file_content(cv_file, cv_filename)
+                logger.info(f"Starting download for file ID {video_file_id}...")
+                temp_audio_path = await fp.download_audio_from_drive_to_temp_file(self.drive_service, video_file_id)
+                logger.success(f"File successfully downloaded to temporary path: {temp_audio_path}")
+
+                logger.info(f"Sending downloaded file for transcription...")
+                transcription_text = await fp.transcribe_audio_assemblyai(temp_audio_path)
+                logger.success("Transcription received successfully.")
+
+                if not transcription_text:
+                    logger.warning("Transcription result is empty. Raising an error.")
+                    raise ValueError("Transcription returned no text. The video might be silent or too short.")
                 else:
-                    cv_text = "CV was not provided."
+                    logger.info(f"Transcription is not empty. Character count: {len(transcription_text)}")
 
                 logger.info("Downloading text artifacts from Google Drive...")
                 links = {

@@ -112,6 +112,18 @@ async def transcribe_audio_assemblyai(audio_path: str) -> str:
     """
     logger.info(f"Starting audio transcription ({audio_path}) via AssemblyAI...")
 
+    try:
+        if not os.path.exists(audio_path):
+            logger.error(f"File not found at the provided path: {audio_path}")
+            raise FileNotFoundError(f"Audio file for transcription not found at {audio_path}")
+
+        file_size_mb = os.path.getsize(audio_path) / (1024 * 1024)
+        logger.info(f"Source file found. Size: {file_size_mb:.2f} MB.")
+        if file_size_mb == 0:
+            logger.warning(f"Source file at {audio_path} is empty (0 bytes).")
+    except Exception as e:
+        logger.error(f"Failed to access or check source file at {audio_path}: {e}")
+        raise
 
     custom_settings = AssemblyAISettings(http_timeout=900.0)
     api_client = AssemblyAIClient(settings=custom_settings)
@@ -123,6 +135,7 @@ async def transcribe_audio_assemblyai(audio_path: str) -> str:
         config = aai.TranscriptionConfig(language_detection=True)
         return transcriber.transcribe(audio_path, config=config)
 
+    logger.info("Submitting file to AssemblyAI API for transcription...")
     transcript = await asyncio.to_thread(sync_transcribe_task)
 
     if transcript.status == aai.TranscriptStatus.error:
