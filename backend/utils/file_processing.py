@@ -3,12 +3,13 @@ import re
 import asyncio
 import tempfile
 import os
-import httpx
 from loguru import logger
 
 from pypdf import PdfReader
 import docx
 import assemblyai as aai
+from assemblyai.client import Client as AssemblyAIClient
+from assemblyai.types import Settings as AssemblyAISettings
 from googleapiclient.http import MediaIoBaseDownload
 
 
@@ -107,16 +108,20 @@ def read_file_content(file: io.BytesIO, filename: str) -> str:
 
 async def transcribe_audio_assemblyai(audio_path: str) -> str:
     """
-    Transcribes an audio file from the specified path.
+    Transcribes an audio file from the specified path using a correctly configured client.
     """
     logger.info(f"Starting audio transcription ({audio_path}) via AssemblyAI...")
 
-    custom_client = httpx.Client(timeout=900.0)
-    transcriber = aai.Transcriber(client=custom_client)
+
+    custom_settings = AssemblyAISettings(http_timeout=900.0)
+    api_client = AssemblyAIClient(settings=custom_settings)
+
+    transcriber = aai.Transcriber(client=api_client)
 
     def sync_transcribe_task():
         logger.info("Running synchronous transcription task in a separate thread...")
-        return transcriber.transcribe(audio_path)
+        config = aai.TranscriptionConfig(language_detection=True)
+        return transcriber.transcribe(audio_path, config=config)
 
     transcript = await asyncio.to_thread(sync_transcribe_task)
 
