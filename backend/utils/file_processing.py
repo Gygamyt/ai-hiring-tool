@@ -3,6 +3,7 @@ import re
 import asyncio
 import tempfile
 import os
+import httpx
 from loguru import logger
 
 from pypdf import PdfReader
@@ -110,7 +111,8 @@ async def transcribe_audio_assemblyai(audio_path: str) -> str:
     """
     logger.info(f"Starting audio transcription ({audio_path}) via AssemblyAI...")
 
-    transcriber = aai.Transcriber()
+    custom_client = httpx.Client(timeout=900.0)
+    transcriber = aai.Transcriber(client=custom_client)
 
     def sync_transcribe_task():
         logger.info("Running synchronous transcription task in a separate thread...")
